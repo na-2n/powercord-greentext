@@ -19,11 +19,9 @@
  */
 
 const { React } = require("powercord/webpack");
-const { SwitchItem, TextInput } = require('powercord/components/settings');
+const { SwitchItem } = require('powercord/components/settings');
 
 module.exports = class GreenTextSettings extends React.Component {
-    static DEFAULT_COLOR = "#789922";
-
     constructor(props) {
         super(props);
     }
@@ -32,27 +30,20 @@ module.exports = class GreenTextSettings extends React.Component {
         return (
             <div>
                 <SwitchItem
-                    note="Whether to convert blockquotes into greentext. (NYI)"
-                    value={this.props.getSetting("convertQuotes")}
-                    onChange={() => this.props.toggleSetting("convertQuotes")}
-                    disabled
+                    note="Whether to convert blockquotes into greentext."
+                    value={this.props.getSetting("quotes")}
+                    onChange={() => this.props.toggleSetting("quotes")}
                 >
                     Convert blockquotes
                 </SwitchItem>
 
-                <TextInput
-                    note="The color used for greentext."
-                    defaultValue={this.props.getSetting("color")}
-                    onChange={value => {
-                        if (!value.trim()) {
-                            value = GreenTextSettings.DEFAULT_COLOR;
-                        }
-
-                        this.props.updateSetting("color", value);
-                    }}
+                <SwitchItem
+                    note="Whether to convert lines starting with '>' into greentext."
+                    value={this.props.getSetting("messages")}
+                    onChange={() => this.props.toggleSetting("messages")}
                 >
-                    Greentext color
-                </TextInput>
+                    Convert messages
+                </SwitchItem>
             </div>
         );
     }

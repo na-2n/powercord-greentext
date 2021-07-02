@@ -24,11 +24,14 @@ const { Plugin } = require("powercord/entities");
 
 const Settings = require("./components/Settings.jsx");
 
-// TODO: implement converting blockquotes to greentext
+// TODO: change message preview stuff as well
 module.exports = class GreenText extends Plugin {
     async startPlugin() {
-        this._ensureSetting("convertQuotes", false)
-        this._ensureSetting("color", Settings.DEFAULT_COLOR);
+        this._ensureSetting("quotes", false)
+        this._ensureSetting("messages", true);
+        //this._ensureSetting("color", Settings.DEFAULT_COLOR);
+
+        this.loadStylesheet("./greentext.scss");
 
         powercord.api.settings.registerSettings("greentext", {
             category: this.entityID,
@@ -50,9 +53,10 @@ module.exports = class GreenText extends Plugin {
     }
 
     async _inject() {
+        const self = this;
         const MessageContent = await getModule(m => m.type?.displayName === "MessageContent");
 
-        inject("greentext", MessageContent, "type", (e, res) => {
+        inject("greentext", MessageContent, "type", (_, res) => {
             const children = res.props.children.find(x => Array.isArray(x));
 
             for (const i in children) {
@@ -60,7 +64,8 @@ module.exports = class GreenText extends Plugin {
                 const child = children[i];
 
                 // check if the child is a string or a different react component
-                if (typeof child === "string") {
+                // TODO: fix markup inside of greentext, currently does not work
+                if (self.settings.get("messages", true) && typeof child === "string") {
                     // split it by newline so we dont make the whole message green
                     const lines = child.split("\n");
 
@@ -72,7 +77,7 @@ module.exports = class GreenText extends Plugin {
 
                             if (line.startsWith(">")) {
                                 // replace the greentext line with a greentext component
-                                lines[ln] = React.createElement("div", { style: { color: this.settings.get("color") } }, line);
+                                lines[ln] = React.createElement("div", { className: "greentext" }, line);
                             }
                         }
 
@@ -81,6 +86,24 @@ module.exports = class GreenText extends Plugin {
                         // insert our new child with the greentext components at the front
                         children.unshift(lines);
                     }
+                } else if (self.settings.get("quotes", false) && child.props?.className?.includes("blockquoteContainer")) {
+                    children[i].props.className += " greentext";
+
+                    // find the actual blockquote element
+                    const blockquote = child.props.children.find(c => c.type === "blockquote");
+
+                    const newChildren = blockquote.props.children
+                        .map(
+                            // check if string in case discord does funky stuff like nested blockquotes (they probably wont)
+                            // NOTE: the downside to trimming here is that it also voids inteded blank quotes at start and end
+                            x => typeof x === "string" ? x.trim().split("\n") : x
+                        )
+                        .flatMap(x => x)
+                        // NOTE: might need to move over og blockquote props if discord ever does something special, not a big concern
+                        .map(x => React.createElement("blockquote", null, x));
+
+                    // fuck these old children, we have new and better children
+                    children[i].props.children = newChildren;
                 }
             }
 
