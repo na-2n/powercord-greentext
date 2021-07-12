@@ -96,7 +96,7 @@ module.exports = class GreenText extends Plugin {
                         .map(
                             // check if string in case discord does funky stuff like nested blockquotes (they probably wont)
                             // NOTE: the downside to trimming here is that it also voids inteded blank quotes at start and end
-                            x => typeof x === "string" ? x.trim().split("\n") : x
+                            x => typeof x === "string" ? x.trimEnd().split("\n") : x
                         )
                         .flatMap(x => x)
                         // NOTE: might need to move over og blockquote props if discord ever does something special, not a big concern
