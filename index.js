@@ -75,7 +75,7 @@ module.exports = class GreenText extends Plugin {
                         for (const ln in lines) {
                             const line = lines[ln];
 
-                            if (line.startsWith(">")) {
+                            if (typeof line === "string" && line.startsWith(">")) {
                                 // replace the greentext line with a greentext component
                                 lines[ln] = React.createElement("div", { className: "greentext" }, line);
                             }
