@@ -75,9 +75,13 @@ module.exports = class GreenText extends Plugin {
                         for (const ln in lines) {
                             const line = lines[ln];
 
-                            if (typeof line === "string" && line.startsWith(">")) {
-                                // replace the greentext line with a greentext component
-                                lines[ln] = React.createElement("div", { className: "greentext" }, line);
+                            if (typeof line === "string") {
+                                if (line.startsWith(">")) {
+                                    // replace the greentext line with a greentext component
+                                    lines[ln] = React.createElement("div", { className: "greentext" }, line);
+                                } else if (ln < lines.length - 1) {
+                                    lines[ln] = line + "\n"
+                                }
                             }
                         }
 
@@ -102,7 +106,7 @@ module.exports = class GreenText extends Plugin {
                         // NOTE: might need to move over og blockquote props if discord ever does something special, not a big concern
                         .map(x => React.createElement("blockquote", null, x));
 
-                    // fuck these old children, we have new and better children
+                    // replace children
                     children[i].props.children = newChildren;
                 }
             }
