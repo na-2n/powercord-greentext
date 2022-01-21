@@ -30,19 +30,19 @@ module.exports = class GreenTextSettings extends React.Component {
         return (
             <div>
                 <SwitchItem
-                    note="Whether to convert blockquotes into greentext."
-                    value={this.props.getSetting("quotes")}
-                    onChange={() => this.props.toggleSetting("quotes")}
-                >
-                    Convert blockquotes
-                </SwitchItem>
-
-                <SwitchItem
                     note="Whether to convert lines starting with '>' into greentext."
                     value={this.props.getSetting("messages")}
                     onChange={() => this.props.toggleSetting("messages")}
                 >
                     Convert messages
+                </SwitchItem>
+
+                <SwitchItem
+                    note="Whether to convert blockquotes into greentext."
+                    value={this.props.getSetting("quotes")}
+                    onChange={() => this.props.toggleSetting("quotes")}
+                >
+                    Convert blockquotes
                 </SwitchItem>
             </div>
         );

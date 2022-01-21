@@ -29,7 +29,6 @@ module.exports = class GreenText extends Plugin {
     async startPlugin() {
         this._ensureSetting("quotes", false)
         this._ensureSetting("messages", true);
-        //this._ensureSetting("color", Settings.DEFAULT_COLOR);
 
         this.loadStylesheet("./greentext.scss");
 
@@ -38,6 +37,7 @@ module.exports = class GreenText extends Plugin {
             label: "Greentext",
             render: Settings
         });
+
 
         await this._inject();
     }
@@ -54,66 +54,57 @@ module.exports = class GreenText extends Plugin {
 
     async _inject() {
         const self = this;
-        const MessageContent = await getModule(m => m.type?.displayName === "MessageContent");
+        const SimpleMarkdown = await getModule(m => m.parseEmbedTitle);
 
-        inject("greentext", MessageContent, "type", (_, res) => {
-            const children = res.props.children.find(x => Array.isArray(x));
+        inject("greentext", SimpleMarkdown, "parse", (args) => {
+            return SimpleMarkdown.reactParserFor({
+                greentext: {
+                    order: SimpleMarkdown.defaultRules.text.order,
+                    match: (text, state) => {
+                        if (state.inGreetext || state.inQuote) return null;
 
-            for (const i in children) {
-                // separate the child from its siblings for easy access
-                const child = children[i];
+                        return /^$|\n$/.test(
+                            state.prevCapture != null ? state.prevCapture[0] : ""
+                        ) && /^(>.+?)(?:\n|$)/.exec(text);
+                    },
+                    parse: (capture, parse, state) => {
+                        state.inGreetext = true;
 
-                // check if the child is a string or a different react component
-                // TODO: fix markup inside of greentext, currently does not work
-                if (self.settings.get("messages", true) && typeof child === "string") {
-                    // split it by newline so we dont make the whole message green
-                    const lines = child.split("\n");
+                        const node = {
+                            content: parse(capture[0], state),
+                            type: "greentext"
+                        };
 
-                    // only replace shit if we actually have greentext in the message
-                    if (lines.some(l => l.startsWith(">"))) {
-                        // go over each line to see where we need to insert greentext components
-                        for (const ln in lines) {
-                            const line = lines[ln];
-
-                            if (typeof line === "string") {
-                                if (line.startsWith(">")) {
-                                    // replace the greentext line with a greentext component
-                                    lines[ln] = React.createElement("div", { className: "greentext" }, line);
-                                } else if (ln < lines.length - 1) {
-                                    lines[ln] = line + "\n"
-                                }
-                            }
-                        }
-
-                        // remove the old child
-                        children.splice(i, 1);
-                        // insert our new child with the greentext components at the front
-                        children.unshift(lines);
-                    }
-                } else if (self.settings.get("quotes", false) && child.props?.className?.includes("blockquoteContainer")) {
-                    children[i].props.className += " greentext";
-
-                    // find the actual blockquote element
-                    const blockquote = child.props.children.find(c => c.type === "blockquote");
-
-                    const newChildren = blockquote.props.children
-                        .map(
-                            // check if string in case discord does funky stuff like nested blockquotes (they probably wont)
-                            // NOTE: the downside to trimming here is that it also voids inteded blank quotes at start and end
-                            x => typeof x === "string" ? x.trimEnd().split("\n") : x
+                        delete state.inGreetext;
+                        return node;
+                    },
+                    react: (node, recurseOutput, state) => (
+                        React.createElement(
+                            "span",
+                            // this is actually retarded
+                            // TODO: find a better way to turn it on/off, maybe loading/unloading css?
+                            { className: (self.settings.get("messages", true) ? "greentext" : "greentext-off") },
+                            recurseOutput(node.content, state)
                         )
-                        .flatMap(x => x)
-                        // NOTE: might need to move over og blockquote props if discord ever does something special, not a big concern
-                        .map(x => React.createElement("blockquote", null, x));
-
-                    // replace children
-                    children[i].props.children = newChildren;
+                    )
+                },
+                ...SimpleMarkdown.defaultRules,
+                // TODO: see previous comment
+                blockQuote: {
+                    ...SimpleMarkdown.defaultRules.blockQuote,
+                    react: (node, recurseOutput, state) => self.settings.get("quotes", false) ? (
+                        React.createElement(
+                            "div",
+                            { className: "blockquoteContainer greentext" },
+                            React.createElement(
+                                "blockquote",
+                                null,
+                                recurseOutput(node.content, state)
+                            )
+                        )
+                    ) : SimpleMarkdown.defaultRules.blockQuote.react(node, recurseOutput, state)
                 }
-            }
-
-            return res;
+            })(...args)
         });
-
-        MessageContent.type.displayName = "MessageContent";
     }
 }
